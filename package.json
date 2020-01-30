@@ -1,0 +1,20 @@
+{
+  "name": "brainiac",
+  "version": "0.7.0",
+  "description": "A simple server for storing and replaying inputs and outputs",
+  "main": "brainiac.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Joshua Marshall Moore",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "express": "^4.17.1",
+    "serve-favicon": "^2.5.0"
+  },
+  "dependencies": {
+    "brain.js": "^2.0.0-alpha.12",
+    "open": "^7.0.1",
+    "opener": "^1.5.1"
+  }
+}

@@ -1,0 +1,114 @@
+#!/usr/bin/env node
+
+const tls = require('tls');
+
+tls.DEFAULT_MAX_VERSION = tls.DEFAULT_MAX_VERSION;
+
+const fs = require('fs')
+const https = require('https')
+
+const express = require('express')
+const favicon = require('serve-favicon')
+const path = require('path')
+const app = express()
+
+const C = require('./lib/combinatorics')
+
+express.static.mime.define({
+  'wasm': 'application/wasm',
+  'js': 'application/javascript',
+  'css': 'text/css'
+})
+
+app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use('/', express.static(path.join(__dirname, 'public')));
+
+const settingNames = ['attraction', 'repulsion', 'epsilon', 'inner_distance', 'friction', 'dampening'];
+const randomSetting = function(){
+  var base = Math.floor(Math.random() * 10)
+  var exp = Math.floor(Math.random() * 6);
+  var sign = Math.random() < 0.5 ? -1 : 1; 
+  var expSign = Math.random() < 0.5 ? -1 : 1;
+
+  var number = parseFloat(`${sign * base}e${exp * expSign}`);
+  return number
+}
+
+const vary = function*(){
+  const range = function*(start, end, step){
+    let val = start;
+    while(val <= end){
+      yield val;
+      val += step;
+    }
+  }
+
+  let signs = range(-1, 1, 1);
+  let bases = range(-10, 10, 1);
+  let expSigns = range(-1, 1, 1);
+  let exps = range(-6, 6, 1);
+
+  let cp = C.cartesianProduct([...signs], [...bases], [...expSigns], [...exps]);
+  const setting = function(sign, base, expSign, exp){
+    return parseFloat(`${sign * base}e${expSign * exp}`);
+  }
+
+  let raw;
+  while(raw = cp.next()){
+    yield setting(...raw);
+  }
+}
+
+const allSettings = C.baseN([...vary()], 6);
+console.log('allSettings.length', allSettings.length);
+for(var i=0; i<allSettings.length; i++){
+  console.log(allSettings.nth(i));
+}
+
+app.get('/index.html', (req, res) => {
+  var template = `
+<!DOCTYPE html>
+<html ng-app="BrainiacApp">
+  <head>
+    <meta charset="utf-8">
+    <title>Brainiac</title>
+    <link rel="stylesheet" href="app.css">
+    <script src="angular.min.js"></script>
+    <script src="graph-visualization.bundle.js"></script>
+    <script src="three.min.js"></script>
+    <script src="app.js"></script>
+  </head>
+  <body ng-controller="BrainiacCtrl">
+      <graph-visualization id="graph"
+        width="100%"
+        height="100%"
+        epsilon="${epsilon}"
+        attraction="${attraction}"
+        repulsion="${repulsion}"
+        friction="${friction}"
+        time-dilation="${time_dilation}"
+        inner-distance="${inner_distance}"
+        dampening="${dampening}"
+        theta="${theta}"
+        >
+        <graph-vertex id="one" ></graph-vertex>
+        <graph-vertex id="two" ></graph-vertex>
+        <graph-edge id="edge" source="#one" target="#two"></graph-edge>
+      </graph-visualization>
+  </body>
+</html>
+`;
+
+  res.render(template);
+})
+
+var credentials = {
+  key: fs.readFileSync('/etc/ssl/localcerts/localhost.key'),
+  cert: fs.readFileSync('/etc/ssl/localcerts/localhost.pem')
+}
+
+const server = https.createServer(credentials, app)
+
+const port = 443
+server.listen(port)
+console.log(`Opening https://localhost:${port}/`)
