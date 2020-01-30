@@ -11,6 +11,9 @@ const express = require('express')
 const favicon = require('serve-favicon')
 const path = require('path')
 const app = express()
+const bodyParser = require('body-parser');
+
+
 
 const C = require('./lib/combinatorics')
 
@@ -20,19 +23,11 @@ express.static.mime.define({
   'css': 'text/css'
 })
 
+app.use(bodyParser.json());
 app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use('/', express.static(path.join(__dirname, 'public')));
 
-const settingNames = ['attraction', 'repulsion', 'epsilon', 'inner_distance', 'friction', 'dampening'];
-const randomSetting = function(){
-  var base = Math.floor(Math.random() * 10)
-  var exp = Math.floor(Math.random() * 6);
-  var sign = Math.random() < 0.5 ? -1 : 1; 
-  var expSign = Math.random() < 0.5 ? -1 : 1;
-
-  var number = parseFloat(`${sign * base}e${exp * expSign}`);
-  return number
-}
+const settingNames = ['attraction', 'repulsion', 'epsilon', 'time_dilation', 'inner_distance', 'friction', 'dampening', 'theta'];
 
 const vary = function*(){
   const range = function*(start, end, step){
@@ -44,7 +39,7 @@ const vary = function*(){
   }
 
   let signs = range(-1, 1, 1);
-  let bases = range(-10, 10, 1);
+  let bases = range(-9, 9, 1);
   let expSigns = range(-1, 1, 1);
   let exps = range(-6, 6, 1);
 
@@ -59,14 +54,23 @@ const vary = function*(){
   }
 }
 
-const allSettings = C.baseN([...vary()], 6);
+const allSettings = C.baseN([...vary()], settingNames.length);
 console.log('allSettings.length', allSettings.length);
-for(var i=0; i<allSettings.length; i++){
-  console.log(allSettings.nth(i));
-}
 
-app.get('/index.html', (req, res) => {
-  var template = `
+app.post('/settings', (req, res) => {
+  console.log('settings received')
+  console.log(req.body.i, req.body.settings);
+})
+
+let i=0;
+app.get('/', (req, res) => {
+  const settings = allSettings.nth(i);
+  const s = {};
+  settingNames.forEach((settingName, j) => {
+    s[settingName] = settings[j];
+  })
+
+  let template = `
 <!DOCTYPE html>
 <html ng-app="BrainiacApp">
   <head>
@@ -79,17 +83,30 @@ app.get('/index.html', (req, res) => {
     <script src="app.js"></script>
   </head>
   <body ng-controller="BrainiacCtrl">
+
+      <script type="text/javascript">
+        i=${i};
+        epsilon=${s.epsilon};
+        attraction=${s.attraction};
+        repulsion=${s.repulsion};
+        friction=${s.friction};
+        time_dilation=${s.time_dilation};
+        inner_distance=${s.inner_distance};
+        dampening=${s.dampening};
+        theta=${s.theta};
+      </script>
       <graph-visualization id="graph"
+        data-settings-i="${i}"
         width="100%"
         height="100%"
-        epsilon="${epsilon}"
-        attraction="${attraction}"
-        repulsion="${repulsion}"
-        friction="${friction}"
-        time-dilation="${time_dilation}"
-        inner-distance="${inner_distance}"
-        dampening="${dampening}"
-        theta="${theta}"
+        epsilon="${s.epsilon}"
+        attraction="${s.attraction}"
+        repulsion="${s.repulsion}"
+        friction="${s.friction}"
+        time-dilation="${s.time_dilation}"
+        inner-distance="${s.inner_distance}"
+        dampening="${s.dampening}"
+        theta="${s.theta}"
         >
         <graph-vertex id="one" ></graph-vertex>
         <graph-vertex id="two" ></graph-vertex>
@@ -99,7 +116,8 @@ app.get('/index.html', (req, res) => {
 </html>
 `;
 
-  res.render(template);
+  res.send(template);
+  i++;
 })
 
 var credentials = {
@@ -111,4 +129,3 @@ const server = https.createServer(credentials, app)
 
 const port = 443
 server.listen(port)
-console.log(`Opening https://localhost:${port}/`)

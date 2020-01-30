@@ -13,7 +13,9 @@
     "serve-favicon": "^2.5.0"
   },
   "dependencies": {
+    "body-parser": "^1.19.0",
     "brain.js": "^2.0.0-alpha.12",
+    "mongodb": "^3.5.2",
     "open": "^7.0.1",
     "opener": "^1.5.1"
   }
