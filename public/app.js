@@ -10,7 +10,8 @@ var BrainiacCtrl = BrainiacApp.controller('BrainiacCtrl', ['$scope', '$http', fu
         'i': i,
         'stopped': true,
         'edge_length': $scope.edgeLength(),
-        'running_time': Date.now() - $scope.start
+        'running_time': Date.now() - $scope.start,
+        'run': run
       })
       location.reload();
     });
@@ -21,7 +22,8 @@ var BrainiacCtrl = BrainiacApp.controller('BrainiacCtrl', ['$scope', '$http', fu
         'i': i,
         'stopped': false,
         'edge_length': $scope.edgeLength(),
-        'running_time': Date.now() - $scope.start
+        'running_time': Date.now() - $scope.start,
+        'run': run
       })
       location.reload();
     }, $scope.timeout)

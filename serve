@@ -1,16 +1,30 @@
 #!/usr/bin/env node
 
+var server_settings = {};
+
+if(process.argv.length > 3){
+  var run = process.argv[2];
+
+  if(process.argv[3] == '--randomize'){
+    server_settings.randomize = true;
+  }else{
+    server_settings.i_seed = parseInt(process.argv[3]);
+  }
+}else{
+  console.log(`Usage: sudo node <run name> [<i seed> | --randomize]`)
+  return;
+}
 const tls = require('tls');
 
 tls.DEFAULT_MAX_VERSION = tls.DEFAULT_MAX_VERSION;
 
-const fs = require('fs')
-const https = require('https')
+const fs = require('fs');
+const https = require('https');
 
-const express = require('express')
-const favicon = require('serve-favicon')
-const path = require('path')
-const app = express()
+const express = require('express');
+const favicon = require('serve-favicon');
+const path = require('path');
+const app = express();
 const bodyParser = require('body-parser');
 
 var MongoClient = require('mongodb').MongoClient
@@ -23,7 +37,7 @@ const client = new MongoClient(url);
 try{
   client.connect(function(err, db) {
     db = db.db('brainiac');
-    console.log("Connected correctly to server");
+    console.log("Connected to server");
     assert.equal(null, err);
     var settings = db.collection('settings');
     var results = db.collection('results');
@@ -47,7 +61,8 @@ try{
         'i': req.body.i,
         'stopped': req.body.stopped,
         'edge_length': req.body.edge_length,
-        'running_time': req.body.running_time
+        'running_time': req.body.running_time,
+        'run': req.body.run
       }], (err, result) => {
         assert.equal(err, null);
         console.log(result)
@@ -84,9 +99,9 @@ const vary = function*(){
   }
 
   let signs = range(-1, 1, 1);
-  let bases = range(-9, 9, 1);
+  let bases = range(1, 9, 1);
   let expSigns = range(-1, 1, 1);
-  let exps = range(-6, 6, 1);
+  let exps = range(-4, 4, 1);
 
   let cp = C.cartesianProduct([...signs], [...bases], [...expSigns], [...exps]);
   const setting = function(sign, base, expSign, exp){
@@ -102,10 +117,13 @@ const vary = function*(){
 const allSettings = C.baseN([...vary()], settingNames.length);
 console.log('allSettings.length', allSettings.length);
 
-
-
-var i=0;
+var L = allSettings.length;
+var i = server_settings.i_seed !== undefined ? i_seed : 0;
 app.get('/', (req, res) => {
+  if(server_settings.randomize){
+    i = Math.floor(Math.random() * L);
+  }
+
   const settings = allSettings.nth(i);
   const s = {};
   settingNames.forEach((settingName, j) => {
@@ -128,6 +146,7 @@ app.get('/', (req, res) => {
 
     <script type="text/javascript">
       i=${i};
+      run=${run}
       epsilon=${s.epsilon};
       attraction=${s.attraction};
       repulsion=${s.repulsion};
@@ -159,7 +178,10 @@ app.get('/', (req, res) => {
 `;
 
   res.send(template);
-  i++;
+
+  if(!server_settings.randomize){
+    i++;
+  }
 })
 
 var credentials = {
