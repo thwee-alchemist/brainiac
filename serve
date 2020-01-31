@@ -13,6 +13,51 @@ const path = require('path')
 const app = express()
 const bodyParser = require('body-parser');
 
+var MongoClient = require('mongodb').MongoClient
+  , assert = require('assert');
+
+var url = 'mongodb://localhost/brainiac';
+
+const client = new MongoClient(url);
+
+try{
+  client.connect(function(err, db) {
+    db = db.db('brainiac');
+    console.log("Connected correctly to server");
+    assert.equal(null, err);
+    var settings = db.collection('settings');
+    var results = db.collection('results');
+
+    app.post('/settings', (req, res) => {
+      console.log('settings received')
+      console.log(req.body.i, req.body.settings);
+
+      settings.insertMany([{
+        'i': req.body.i,
+        'settings': req.body.settings
+      }])
+    
+      res.status(200).send()
+    })
+
+    app.post('/results', (req, res) => {
+      console.log('results received');
+
+      results.insertMany([{
+        'i': req.body.i,
+        'stopped': req.body.stopped,
+        'edge_length': req.body.edge_length,
+        'running_time': req.body.running_time
+      }], (err, result) => {
+        assert.equal(err, null);
+        console.log(result)
+      });
+    })
+  });
+}catch(e){
+  console.error(e);
+  client.close();
+}
 
 
 const C = require('./lib/combinatorics')
@@ -57,12 +102,9 @@ const vary = function*(){
 const allSettings = C.baseN([...vary()], settingNames.length);
 console.log('allSettings.length', allSettings.length);
 
-app.post('/settings', (req, res) => {
-  console.log('settings received')
-  console.log(req.body.i, req.body.settings);
-})
 
-let i=0;
+
+var i=0;
 app.get('/', (req, res) => {
   const settings = allSettings.nth(i);
   const s = {};
@@ -84,34 +126,34 @@ app.get('/', (req, res) => {
   </head>
   <body ng-controller="BrainiacCtrl">
 
-      <script type="text/javascript">
-        i=${i};
-        epsilon=${s.epsilon};
-        attraction=${s.attraction};
-        repulsion=${s.repulsion};
-        friction=${s.friction};
-        time_dilation=${s.time_dilation};
-        inner_distance=${s.inner_distance};
-        dampening=${s.dampening};
-        theta=${s.theta};
-      </script>
-      <graph-visualization id="graph"
-        data-settings-i="${i}"
-        width="100%"
-        height="100%"
-        epsilon="${s.epsilon}"
-        attraction="${s.attraction}"
-        repulsion="${s.repulsion}"
-        friction="${s.friction}"
-        time-dilation="${s.time_dilation}"
-        inner-distance="${s.inner_distance}"
-        dampening="${s.dampening}"
-        theta="${s.theta}"
-        >
-        <graph-vertex id="one" ></graph-vertex>
-        <graph-vertex id="two" ></graph-vertex>
-        <graph-edge id="edge" source="#one" target="#two"></graph-edge>
-      </graph-visualization>
+    <script type="text/javascript">
+      i=${i};
+      epsilon=${s.epsilon};
+      attraction=${s.attraction};
+      repulsion=${s.repulsion};
+      friction=${s.friction};
+      time_dilation=${s.time_dilation};
+      inner_distance=${s.inner_distance};
+      dampening=${s.dampening};
+      theta=${s.theta};
+    </script>
+    <graph-visualization id="graph"
+      data-settings-i="${i}"
+      width="100%"
+      height="100%"
+      epsilon="${s.epsilon}"
+      attraction="${s.attraction}"
+      repulsion="${s.repulsion}"
+      friction="${s.friction}"
+      time-dilation="${s.time_dilation}"
+      inner-distance="${s.inner_distance}"
+      dampening="${s.dampening}"
+      theta="${s.theta}"
+      >
+      <graph-vertex id="one"></graph-vertex>
+      <graph-vertex id="two"></graph-vertex>
+      <graph-edge id="edge" source="#one" target="#two"></graph-edge>
+    </graph-visualization>
   </body>
 </html>
 `;
