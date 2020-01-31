@@ -42,18 +42,26 @@ try{
     var settings = db.collection('settings');
     var results = db.collection('results');
 
+    /**
+     * This route accepts a settings object at the beginning
+     * of the run of an experiment
+     */
     app.post('/settings', (req, res) => {
       console.log('settings received')
       console.log(req.body.i, req.body.settings);
 
       settings.insertMany([{
         'i': req.body.i,
+        'run': req.body.run,
         'settings': req.body.settings
       }])
     
       res.status(200).send()
     })
 
+    /**
+     * This route accepts the results of an experiment launched from /
+     */
     app.post('/results', (req, res) => {
       console.log('results received');
 
@@ -68,6 +76,11 @@ try{
         console.log(result)
       });
     })
+
+    /**
+     *
+     */
+    app.get('/braining', express.static(path.join(__dirname, 'braining')));
   });
 }catch(e){
   console.error(e);
@@ -117,6 +130,12 @@ const vary = function*(){
 const allSettings = C.baseN([...vary()], settingNames.length);
 console.log('allSettings.length', allSettings.length);
 
+
+/**
+ * The main route prepares a page for a graph-visualization experiment
+ * setting the variables to a random set of settings within the parameters
+ * defined  by the vary function. 
+ */
 var L = allSettings.length;
 var i = server_settings.i_seed !== undefined ? i_seed : 0;
 app.get('/', (req, res) => {
@@ -183,6 +202,8 @@ app.get('/', (req, res) => {
     i++;
   }
 })
+
+
 
 var credentials = {
   key: fs.readFileSync('/etc/ssl/localcerts/localhost.key'),
