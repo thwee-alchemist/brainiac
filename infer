@@ -1,45 +1,48 @@
 #!/usr/bin/env node
 
-const brain = require('brain.js');
-const retro = require('brain.retro.js');
-const net = new brain.NeuralNetwork();
+var brain = require('brain.js');
+var retro = require('brain.retro.js');
+var net = new brain.NeuralNetwork();
 
-var MongoClient = require('mongodb').MongoClient
+const MongoClient = require('mongodb').MongoClient
   , assert = require('assert');
 
+
 var url = 'mongodb://localhost/brainiac';
+var client = new MongoClient(url);
+var run = process.argv[process.argv.length - 1]
 
-const client = new MongoClient(url);
-
-const run = process.argv[2]
-
-client.connect(function(err, db) {
-  db = db.db('brainiac');
+client.connect((err, conn) => {
+  
   console.log("Connected to server");
   assert.equal(null, err);
+  db = conn.db('brainiac');
   var results = db.collection('results');
 
   var records = [];
-  var resultStream = results.find({run: {$eq: run}}).stream();
+  var resultStream = results.find({$and: [{'run': {$eq: run}}, {edge_length: {$lt: 30}}]}).stream();
   resultStream.on('error', function (err) {
     console.error(err);
-
-    socket.emit('error')
   });
 
   resultStream.on('data', function (result) {
     console.log('result', result);
     console.log('result.i', result.i)
 
-    const select = (_in, fields) => {
+    var select = (_in, fields) => {
       var _out = {};
       fields.forEach(f => _out[f] = _in[f]);
+
+      console.log(_out);
       return _out;
-    }
-    const record = {
-      input: select(result.settings, settingNames),
+    };
+
+    var record = {
+      input: select(result.settings, ['attraction', 'repulsion', 'epsilon', 'time_dilation', 'inner_distance', 'friction', 'dampening', 'theta']),
       output: select(result, ['edge_length', 'running_time', 'stopped', 'i'])
-    }
+    };
+
+    console.log(record);
 
     records.push(record);
   })
@@ -48,5 +51,7 @@ client.connect(function(err, db) {
     net.train(records);
 
     console.log(retro({edge_length: 10, stopped: false}, net));
+
+    conn.close();
   });
 });

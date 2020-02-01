@@ -86,7 +86,7 @@ try{
         'settings': req.body.settings
       }, (err, result) => {
         assert.equal(err, null);
-        console.log(result)
+        console.dir(result)
       });
 
       res.status(200).send();
