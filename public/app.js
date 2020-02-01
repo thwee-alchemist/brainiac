@@ -8,6 +8,7 @@ var BrainiacCtrl = BrainiacApp.controller('BrainiacCtrl', ['$scope', '$http', fu
     $scope.graph.addEventListener('stopped', () => {
       $http.post('/results', {
         'i': i,
+        'settings': $scope.getSettings(),
         'stopped': true,
         'edge_length': $scope.edgeLength(),
         'running_time': Date.now() - $scope.start,
@@ -20,6 +21,7 @@ var BrainiacCtrl = BrainiacApp.controller('BrainiacCtrl', ['$scope', '$http', fu
     setTimeout(() => {
       $http.post('/results', {
         'i': i,
+        'settings': $scope.getSettings(),
         'stopped': false,
         'edge_length': $scope.edgeLength(),
         'running_time': Date.now() - $scope.start,
@@ -52,8 +54,9 @@ var BrainiacCtrl = BrainiacApp.controller('BrainiacCtrl', ['$scope', '$http', fu
       return settings;
     }
 
+    /*
     $scope.echoSettings = function(){
-      const i = parseFloat($scope.graph.getAttribute('data-settings-i'));
+      const i = parseInt($scope.graph.getAttribute('data-settings-i'));
       const settings = $scope.getSettings();
       $http.post('/settings', {
         't': Date.now(),
@@ -61,6 +64,7 @@ var BrainiacCtrl = BrainiacApp.controller('BrainiacCtrl', ['$scope', '$http', fu
         'settings': settings
       })
     };
+    */
 
     $scope.checkVals = function(){
       if(vi.cube.position === NaN || vi.cube.position === undefined
@@ -69,6 +73,6 @@ var BrainiacCtrl = BrainiacApp.controller('BrainiacCtrl', ['$scope', '$http', fu
       }
     }
     
-    $scope.echoSettings();
+    // $scope.echoSettings();
   });
 }]);

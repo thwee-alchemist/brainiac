@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+
+const brain = require('brain.js');
+const retro = require('brain.retro.js');
+const net = new brain.NeuralNetwork();
+
+var MongoClient = require('mongodb').MongoClient
+  , assert = require('assert');
+
+var url = 'mongodb://localhost/brainiac';
+
+const client = new MongoClient(url);
+
+const run = process.argv[2]
+
+client.connect(function(err, db) {
+  db = db.db('brainiac');
+  console.log("Connected to server");
+  assert.equal(null, err);
+  var results = db.collection('results');
+
+  var records = [];
+  var resultStream = results.find({run: {$eq: run}}).stream();
+  resultStream.on('error', function (err) {
+    console.error(err);
+
+    socket.emit('error')
+  });
+
+  resultStream.on('data', function (result) {
+    console.log('result', result);
+    console.log('result.i', result.i)
+
+    const select = (_in, fields) => {
+      var _out = {};
+      fields.forEach(f => _out[f] = _in[f]);
+      return _out;
+    }
+    const record = {
+      input: select(result.settings, settingNames),
+      output: select(result, ['edge_length', 'running_time', 'stopped', 'i'])
+    }
+
+    records.push(record);
+  })
+
+  resultStream.on('end', function(){
+    net.train(records);
+
+    console.log(retro({edge_length: 10, stopped: false}, net));
+  });
+});

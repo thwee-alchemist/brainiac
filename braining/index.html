@@ -3,11 +3,22 @@
   <head>
     <meta charset="utf-8">
     <title>Braining Page</title>
-    <script src="brain-browser.min.js"></script>
-    <script src="angular.min.js"></script>
+    
+    <script src="../angular.min.js"></script>
+    <script src="../socket.io/socket.io.js"></script>
+
+    <script src="../brain-browser.min.js"></script>
+    <script src="brain.retro/index.js"></script>
     <script src="brainingApp.js"></script>
   </head>
   <body ng-controller="brainingCtrl">
-    <!-- todo -->
+    <select ng-model="selectedRun">
+      <option ng-repeat="run in runs" value="{{run}}">{{run}}</option>
+    </select>
+
+    <button ng-click="fetch()">Fetch</button>
+
+    <hr>
+    <output>{{output}}</output>
   </body>
 </html>

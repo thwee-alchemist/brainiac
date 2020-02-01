@@ -27,6 +27,18 @@ const path = require('path');
 const app = express();
 const bodyParser = require('body-parser');
 
+var credentials = {
+  key: fs.readFileSync('/etc/ssl/localcerts/localhost.key'),
+  cert: fs.readFileSync('/etc/ssl/localcerts/localhost.pem')
+}
+
+const server = https.createServer(credentials, app)
+const io = require('socket.io')(server);
+
+const port = 443
+server.listen(port)
+
+
 var MongoClient = require('mongodb').MongoClient
   , assert = require('assert');
 
@@ -65,22 +77,73 @@ try{
     app.post('/results', (req, res) => {
       console.log('results received');
 
-      results.insertMany([{
+      results.insertOne({
         'i': req.body.i,
         'stopped': req.body.stopped,
         'edge_length': req.body.edge_length,
         'running_time': req.body.running_time,
-        'run': req.body.run
-      }], (err, result) => {
+        'run': req.body.run,
+        'settings': req.body.settings
+      }, (err, result) => {
         assert.equal(err, null);
         console.log(result)
       });
+
+      res.status(200).send();
     })
 
     /**
-     *
+     * Sets up the rbaining page, which loads brain js
      */
-    app.get('/braining', express.static(path.join(__dirname, 'braining')));
+    app.use('/results', express.static(path.join(__dirname, 'braining')));
+
+    io.on('connection', (socket) => {
+
+      socket.on('runs?', () => {
+        console.log('fetching index');
+
+        const runs = results.distinct('run').then((runs) => {
+          console.log(runs);
+          socket.emit('runs', runs);
+        }, (reason) => {
+          console.error(reason);
+        })
+      })
+
+      socket.on('results?', (selectedRun) => {
+        console.log('fetch results for', selectedRun);
+
+        var resultStream = results.find({run: {$eq: selectedRun}}).stream();
+        resultStream.on('error', function (err) {
+          console.error(err);
+  
+          socket.emit('error')
+        });
+
+        resultStream.on('data', function (result) {
+          console.log('result', result);
+          console.log('result.i', result.i)
+
+          const select = (_in, fields) => {
+            var _out = {};
+            fields.forEach(f => _out[f] = _in[f]);
+            return _out;
+          }
+          const record = {
+            input: select(result.settings, settingNames),
+            output: select(result, ['edge_length', 'running_time', 'stopped', 'i'])
+          }
+
+          console.log('result', record)  
+          socket.emit('result', record);
+        })
+
+        resultStream.on('end', function(){
+          socket.emit('results end');
+        });
+      });
+    })
+
   });
 }catch(e){
   console.error(e);
@@ -201,16 +264,4 @@ app.get('/', (req, res) => {
   if(!server_settings.randomize){
     i++;
   }
-})
-
-
-
-var credentials = {
-  key: fs.readFileSync('/etc/ssl/localcerts/localhost.key'),
-  cert: fs.readFileSync('/etc/ssl/localcerts/localhost.pem')
-}
-
-const server = https.createServer(credentials, app)
-
-const port = 443
-server.listen(port)
+});
